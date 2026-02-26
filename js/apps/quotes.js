@@ -16,6 +16,294 @@ const QuotesApp = (() => {
         return `<span class="status-badge" style="background:${s.bg};color:${s.text}">${s.label}</span>`;
     }
 
+    function formatNum(n) {
+        return new Intl.NumberFormat('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0);
+    }
+
+    function generateQuotePDF(quote, lineItems) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const pw = doc.internal.pageSize.getWidth();
+        const ph = doc.internal.pageSize.getHeight();
+        const ml = 14, mr = 14;
+        const cw = pw - ml - mr;
+        let y = 0;
+
+        const VAT_RATE = 5;
+        const companyName = 'Bolsover Building Contracting LLC';
+        const companyAddress = 'Dubai\nUnited Arab Emirates';
+        const companyEmail = 'tom@bolsovercontracting.com';
+        const companyTRN = 'TRN: 104540872900003';
+
+        // --- Header band with logo ---
+        doc.setFillColor(26, 26, 46);
+        doc.rect(0, 0, pw, 32, 'F');
+
+        // "B" logo box
+        doc.setFillColor(255, 255, 255);
+        doc.roundedRect(ml, 7, 18, 18, 2, 2, 'F');
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(26, 26, 46);
+        doc.text('B', ml + 9, 19.5, { align: 'center' });
+
+        // Company name in header
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('B O L S O V E R', ml + 22, 13);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text('B U I L D I N G', ml + 22, 18);
+        doc.text('C O N T R A C T I N G', ml + 22, 23);
+
+        y = 40;
+
+        // --- Company info (left) ---
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text(companyName, ml, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.text('Dubai', ml, y + 5);
+        doc.text('United Arab Emirates', ml, y + 9);
+        doc.text(companyEmail, ml, y + 13);
+        doc.text(companyTRN, ml, y + 17);
+
+        // --- "Quote" title (right) ---
+        doc.setFontSize(28);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(0, 0, 0);
+        doc.text('Quote', pw - mr, y, { align: 'right' });
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`# ${quote.reference || '—'}`, pw - mr, y + 8, { align: 'right' });
+
+        y += 26;
+
+        // --- Bill To (left) ---
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Bill To', ml, y);
+        doc.setFont('helvetica', 'bold');
+        const clientName = quote.project?.client?.name || '—';
+        doc.text(clientName, ml, y + 5);
+        doc.setFont('helvetica', 'normal');
+
+        // --- Quote Date (right) ---
+        const quoteDate = new Date(quote.sent_to_client_at || quote.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        doc.setFont('helvetica', 'normal');
+        doc.text('Quote Date :', pw - mr - 40, y);
+        doc.text(quoteDate, pw - mr, y, { align: 'right' });
+
+        y += 12;
+
+        // --- Subject ---
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Subject :', ml, y);
+        doc.text(quote.project?.reference || '—', ml, y + 5);
+
+        y += 14;
+
+        // --- Line items table ---
+        // Calculate VAT per item: prices are tax-inclusive, so tax = price * VAT_RATE / (100 + VAT_RATE)
+        const tableBody = lineItems.map((item, i) => {
+            const rate = item.client_unit_price || 0;
+            const amount = item.price || 0;
+            const taxAmount = amount * VAT_RATE / (100 + VAT_RATE);
+            return [
+                String(i + 1),
+                item.description || '',
+                formatNum(item.quantity),
+                formatNum(rate),
+                `${VAT_RATE}.00`,
+                formatNum(taxAmount),
+                formatNum(amount),
+            ];
+        });
+
+        // Helper to draw continuation page header
+        let firstTablePage = true;
+        function drawPageHeader(d) {
+            d.setFillColor(26, 26, 46);
+            d.roundedRect(ml, 5, 12, 12, 1.5, 1.5, 'F');
+            d.setFontSize(10);
+            d.setFont('helvetica', 'bold');
+            d.setTextColor(255, 255, 255);
+            d.text('B', ml + 6, 13, { align: 'center' });
+            d.setTextColor(26, 26, 46);
+            d.setFontSize(7);
+            d.text('B O L S O V E R', ml + 16, 9);
+            d.text('B U I L D I N G', ml + 16, 12.5);
+            d.text('C O N T R A C T I N G', ml + 16, 16);
+        }
+
+        doc.autoTable({
+            startY: y,
+            margin: { left: ml, right: mr, top: 32 },
+            head: [['#', 'Item & Description', 'Qty', 'Rate', 'Tax %', 'Tax', 'Amount']],
+            body: tableBody,
+            rowPageBreak: 'avoid',
+            styles: {
+                fontSize: 8,
+                cellPadding: { top: 3, right: 4, bottom: 3, left: 4 },
+                lineColor: [229, 231, 235],
+                lineWidth: 0.3,
+            },
+            headStyles: {
+                fillColor: [248, 250, 252],
+                textColor: [100, 116, 139],
+                fontStyle: 'bold',
+                fontSize: 7,
+            },
+            columnStyles: {
+                0: { cellWidth: 14, halign: 'center' },
+                1: { cellWidth: 'auto' },
+                2: { cellWidth: 18, halign: 'center' },
+                3: { cellWidth: 22, halign: 'right' },
+                4: { cellWidth: 16, halign: 'center' },
+                5: { cellWidth: 22, halign: 'right' },
+                6: { cellWidth: 24, halign: 'right' },
+            },
+            didDrawPage: (data) => {
+                // Draw logo on every page except the first (which has the full header)
+                if (!firstTablePage) {
+                    drawPageHeader(doc);
+                }
+                firstTablePage = false;
+            },
+            didParseCell: (data) => {
+                if (data.section === 'body') {
+                    data.cell.styles.textColor = [51, 51, 51];
+                }
+            },
+        });
+
+        y = doc.lastAutoTable.finalY + 2;
+
+        // --- Totals ---
+        const subTotal = lineItems.reduce((s, i) => s + (i.price || 0), 0);
+        const totalTax = subTotal * VAT_RATE / (100 + VAT_RATE);
+        const taxableAmount = subTotal - totalTax;
+
+        // Check if totals block fits on current page (needs ~30mm)
+        if (y + 30 > ph - 20) { doc.addPage(); y = 32; }
+
+        const totalsX = pw - mr - 70;
+        const valX = pw - mr;
+
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(51, 51, 51);
+        doc.text('Sub Total', totalsX, y + 6, { align: 'right' });
+        doc.setFontSize(7);
+        doc.text('(Tax Inclusive)', totalsX, y + 10, { align: 'right' });
+        doc.setFontSize(8);
+        doc.text(formatNum(subTotal), valX, y + 6, { align: 'right' });
+
+        y += 14;
+        doc.text(`Standard Rate (${VAT_RATE}%)`, totalsX, y, { align: 'right' });
+        doc.text(formatNum(totalTax), valX, y, { align: 'right' });
+
+        y += 6;
+        doc.setFillColor(254, 243, 199);
+        doc.rect(totalsX - 10, y - 3, valX - totalsX + 14, 8, 'F');
+        doc.setFont('helvetica', 'bold');
+        doc.text('Total', totalsX, y + 2, { align: 'right' });
+        doc.text(`AED${formatNum(subTotal)}`, valX, y + 2, { align: 'right' });
+
+        y += 16;
+
+        // --- Tax Summary ---
+        if (y + 40 > ph - 20) { doc.addPage(); y = 32; }
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Tax Summary', ml, y);
+        y += 4;
+
+        doc.autoTable({
+            startY: y,
+            margin: { left: ml, right: mr, top: 32 },
+            head: [['Tax Details', 'Taxable Amount (AED)', 'Tax Amount (AED)']],
+            body: [
+                [`Standard Rate (${VAT_RATE}%)`, `${formatNum(taxableAmount)}`, `${formatNum(totalTax)}`],
+                ['Total', `AED${formatNum(taxableAmount)}`, `AED${formatNum(totalTax)}`],
+            ],
+            styles: {
+                fontSize: 8,
+                cellPadding: { top: 3, right: 4, bottom: 3, left: 4 },
+                lineColor: [229, 231, 235],
+                lineWidth: 0.3,
+            },
+            headStyles: {
+                fillColor: [248, 250, 252],
+                textColor: [100, 116, 139],
+                fontStyle: 'bold',
+                fontSize: 7,
+            },
+            columnStyles: {
+                0: { cellWidth: 'auto' },
+                1: { cellWidth: 40, halign: 'right' },
+                2: { cellWidth: 40, halign: 'right' },
+            },
+            didParseCell: (data) => {
+                if (data.section === 'body' && data.row.index === 1) {
+                    data.cell.styles.fontStyle = 'bold';
+                }
+            },
+        });
+
+        y = doc.lastAutoTable.finalY + 10;
+
+        // --- Notes ---
+        if (y + 20 > ph - 30) { doc.addPage(); y = 32; }
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Notes', ml, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.text('Looking forward for your business.', ml, y + 6);
+
+        y += 14;
+
+        // --- Terms & Conditions ---
+        if (y + 20 > ph - 30) { doc.addPage(); y = 32; }
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text('Terms & Conditions', ml, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.text('Payment Terms:', ml, y + 6);
+        doc.text('50% Deposit', ml, y + 10);
+        doc.text('50% Upon Progress', ml, y + 14);
+
+        // --- Footer line + page numbers on every page, logo on non-table continuation pages ---
+        const totalPages = doc.internal.getNumberOfPages();
+        for (let p = 1; p <= totalPages; p++) {
+            doc.setPage(p);
+            // Bottom colored line
+            doc.setDrawColor(26, 26, 46);
+            doc.setLineWidth(1);
+            doc.line(ml, ph - 12, pw - mr, ph - 12);
+            // Page number
+            doc.setFontSize(7);
+            doc.setTextColor(150, 150, 150);
+            doc.text(String(p), pw - mr, ph - 6, { align: 'right' });
+
+            // Draw logo on pages that weren't handled by autoTable's didDrawPage
+            if (p > 1) {
+                drawPageHeader(doc);
+            }
+        }
+
+        return doc;
+    }
+
     async function launch() {
         const html = `
             <div class="app-container quotes">
@@ -34,7 +322,7 @@ const QuotesApp = (() => {
         const body = win.querySelector('.app-container');
         try {
             const { data: quotes, error } = await SupabaseClient.from('boq')
-                .select('*, project:projects(reference, client:clients(name))')
+                .select('*, project:projects(reference, client:clients(name, email, phone))')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -226,7 +514,7 @@ const QuotesApp = (() => {
                 if (error) throw error;
 
                 const { data: quote } = await SupabaseClient.from('boq')
-                    .select('*, project:projects(reference, client:clients(name))')
+                    .select('*, project:projects(reference, client:clients(name, email, phone))')
                     .eq('id', data.id)
                     .single();
                 loadDetail(win, quote || data);
@@ -277,6 +565,8 @@ const QuotesApp = (() => {
                             <button id="q-status-go">Update</button>
                         </div>
                         <button class="btn-edit" id="q-edit-btn">Edit Details</button>
+                        <button class="import-btn" id="q-download-pdf">Download PDF</button>
+                        ${quote.status !== 'accepted' && quote.status !== 'sent' ? `<button class="import-btn" id="q-send-client">Send to Client</button>` : ''}
                         <button class="import-btn" id="q-manage-rfqs">Manage RFQs →</button>
                     </div>
 
@@ -366,25 +656,90 @@ const QuotesApp = (() => {
             // Back
             body.querySelector('#q-back').addEventListener('click', () => loadList(win));
 
+            // Download PDF
+            body.querySelector('#q-download-pdf').addEventListener('click', () => {
+                const doc = generateQuotePDF(quote, lineItems);
+                doc.save(`${quote.reference || 'Quote'}.pdf`);
+            });
+
+            // Send to Client
+            const sendBtn = body.querySelector('#q-send-client');
+            if (sendBtn) {
+                sendBtn.addEventListener('click', async () => {
+                    const clientEmail = quote.project?.client?.email;
+                    const clientName = quote.project?.client?.name || 'Client';
+                    if (!clientEmail) {
+                        alert('No email address found for this client. Please update the client record first.');
+                        return;
+                    }
+                    if (!confirm(`Send quote PDF to ${clientName} (${clientEmail})?`)) return;
+
+                    sendBtn.disabled = true;
+                    sendBtn.textContent = 'Sending...';
+
+                    try {
+                        const doc = generateQuotePDF(quote, lineItems);
+                        const pdfBase64 = doc.output('datauristring').split(',')[1];
+
+                        const res = await fetch(
+                            'https://ckvprducwuhhnrkbzaoo.supabase.co/functions/v1/send-quote',
+                            {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${(await SupabaseClient.getSession())?.access_token}`,
+                                },
+                                body: JSON.stringify({
+                                    client_email: clientEmail,
+                                    client_name: clientName,
+                                    quote_reference: quote.reference || '',
+                                    project_reference: quote.project?.reference || '',
+                                    total_price: calcPrice,
+                                    pdf_base64: pdfBase64,
+                                }),
+                            }
+                        );
+                        const result = await res.json();
+                        if (!result.success) throw new Error(result.error || 'Failed to send email');
+
+                        // Update status to sent
+                        await SupabaseClient.from('boq').update({
+                            status: 'sent',
+                            sent_to_client_at: new Date().toISOString(),
+                        }).eq('id', quote.id);
+
+                        const { data: refreshed } = await SupabaseClient.from('boq')
+                            .select('*, project:projects(reference, client:clients(name, email, phone))')
+                            .eq('id', quote.id).single();
+                        loadDetail(win, refreshed || quote);
+                    } catch (err) {
+                        alert('Failed to send quote: ' + err.message);
+                        sendBtn.disabled = false;
+                        sendBtn.textContent = 'Send to Client';
+                    }
+                });
+            }
+
             // Status update
             body.querySelector('#q-status-go').addEventListener('click', async () => {
                 const newStatus = body.querySelector('#q-status-select').value;
+
+                // Intercept "accepted" to show workflow
+                if (newStatus === 'accepted') {
+                    showAcceptanceWorkflow(win, quote, lineItems, calcPrice);
+                    return;
+                }
+
                 const btn = body.querySelector('#q-status-go');
                 btn.disabled = true;
                 btn.textContent = '...';
                 try {
                     const updates = { status: newStatus };
                     if (newStatus === 'sent') updates.sent_to_client_at = new Date().toISOString();
-                    if (newStatus === 'accepted') {
-                        updates.approved_at = new Date().toISOString();
-                        await SupabaseClient.from('projects')
-                            .update({ status: 'accepted', contract_value: calcPrice })
-                            .eq('id', quote.project_id);
-                    }
                     const { error } = await SupabaseClient.from('boq').update(updates).eq('id', quote.id);
                     if (error) throw error;
                     const { data: refreshed } = await SupabaseClient.from('boq')
-                        .select('*, project:projects(reference, client:clients(name))')
+                        .select('*, project:projects(reference, client:clients(name, email, phone))')
                         .eq('id', quote.id).single();
                     loadDetail(win, refreshed || quote);
                 } catch (err) {
@@ -414,7 +769,7 @@ const QuotesApp = (() => {
                     });
                     if (error) throw error;
                     const { data: refreshed } = await SupabaseClient.from('boq')
-                        .select('*, project:projects(reference, client:clients(name))')
+                        .select('*, project:projects(reference, client:clients(name, email, phone))')
                         .eq('id', quote.id).single();
                     loadDetail(win, refreshed || quote);
                 } catch (err) {
@@ -452,7 +807,7 @@ const QuotesApp = (() => {
                         if (error) throw error;
                         await recalcBoqTotals(quote.id);
                         const { data: refreshed } = await SupabaseClient.from('boq')
-                            .select('*, project:projects(reference, client:clients(name))')
+                            .select('*, project:projects(reference, client:clients(name, email, phone))')
                             .eq('id', quote.id).single();
                         loadDetail(win, refreshed || quote);
                     } catch (err) {
@@ -532,7 +887,7 @@ const QuotesApp = (() => {
                 }).eq('id', quote.id);
                 if (error) throw error;
                 const { data: refreshed } = await SupabaseClient.from('boq')
-                    .select('*, project:projects(reference, client:clients(name))')
+                    .select('*, project:projects(reference, client:clients(name, email, phone))')
                     .eq('id', quote.id).single();
                 loadDetail(win, refreshed || quote);
             } catch (err) {
@@ -686,7 +1041,7 @@ const QuotesApp = (() => {
                 await recalcBoqTotals(quote.id);
 
                 const { data: refreshed } = await SupabaseClient.from('boq')
-                    .select('*, project:projects(reference, client:clients(name))')
+                    .select('*, project:projects(reference, client:clients(name, email, phone))')
                     .eq('id', quote.id).single();
                 loadDetail(win, refreshed || quote);
             } catch (err) {
@@ -802,6 +1157,215 @@ const QuotesApp = (() => {
         reader.readAsArrayBuffer(file);
     }
 
+    async function showAcceptanceWorkflow(win, quote, lineItems, calcPrice) {
+        const body = win.querySelector('.app-container');
+        const clientEmail = quote.project?.client?.email || '';
+        const clientName = quote.project?.client?.name || '';
+        const today = new Date().toISOString().split('T')[0];
+        const dueDateDefault = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+
+        body.innerHTML = `
+            <div class="form-view">
+                <div class="form-header">
+                    <button class="back-btn" id="aw-back">← Back</button>
+                    <h2>Quote Accepted — Next Steps</h2>
+                </div>
+                <div class="form-body">
+                    <div class="form-section">
+                        <h4>Contract Documents</h4>
+                        <div class="form-grid">
+                            <div class="form-group full">
+                                <label>
+                                    <input type="checkbox" id="aw-docusign" checked>
+                                    Send contract documents via DocuSign
+                                </label>
+                            </div>
+                            <div class="form-group" id="aw-ds-fields">
+                                <label>Signer Email</label>
+                                <input type="email" id="aw-signer-email" value="${clientEmail}">
+                            </div>
+                            <div class="form-group" id="aw-ds-fields2">
+                                <label>Signer Name</label>
+                                <input type="text" id="aw-signer-name" value="${clientName}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-section">
+                        <h4>First Payment Invoice</h4>
+                        <div class="form-grid">
+                            <div class="form-group full">
+                                <label>
+                                    <input type="checkbox" id="aw-invoice" checked>
+                                    Create first payment invoice
+                                </label>
+                            </div>
+                            <div class="form-group" id="aw-inv-fields">
+                                <label>Amount (AED)</label>
+                                <input type="number" id="aw-inv-amount" step="0.01" value="${Math.round(calcPrice * 0.5 * 100) / 100}" placeholder="Deposit amount">
+                            </div>
+                            <div class="form-group" id="aw-inv-fields2">
+                                <label>Invoice Type</label>
+                                <select id="aw-inv-type">
+                                    <option value="deposit" selected>Deposit</option>
+                                    <option value="progress_claim">Progress Claim</option>
+                                    <option value="milestone">Milestone</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="aw-inv-fields3">
+                                <label>Due Date</label>
+                                <input type="date" id="aw-inv-due" value="${dueDateDefault}">
+                            </div>
+                        </div>
+                    </div>
+                    <div id="aw-error"></div>
+                    <div id="aw-progress" style="display:none;padding:12px 0;font-size:13px;color:var(--text-secondary)"></div>
+                </div>
+                <div class="form-actions">
+                    <button class="back-btn" id="aw-cancel">Cancel</button>
+                    <button class="btn-save" id="aw-proceed">Proceed</button>
+                </div>
+            </div>
+        `;
+
+        // Toggle field visibility based on checkboxes
+        const dsCheck = body.querySelector('#aw-docusign');
+        const invCheck = body.querySelector('#aw-invoice');
+        dsCheck.addEventListener('change', () => {
+            const show = dsCheck.checked;
+            body.querySelector('#aw-ds-fields').style.display = show ? '' : 'none';
+            body.querySelector('#aw-ds-fields2').style.display = show ? '' : 'none';
+        });
+        invCheck.addEventListener('change', () => {
+            const show = invCheck.checked;
+            body.querySelector('#aw-inv-fields').style.display = show ? '' : 'none';
+            body.querySelector('#aw-inv-fields2').style.display = show ? '' : 'none';
+            body.querySelector('#aw-inv-fields3').style.display = show ? '' : 'none';
+        });
+
+        const goBack = () => loadDetail(win, quote);
+        body.querySelector('#aw-back').addEventListener('click', goBack);
+        body.querySelector('#aw-cancel').addEventListener('click', goBack);
+
+        body.querySelector('#aw-proceed').addEventListener('click', async () => {
+            const btn = body.querySelector('#aw-proceed');
+            const errEl = body.querySelector('#aw-error');
+            const progressEl = body.querySelector('#aw-progress');
+            errEl.innerHTML = '';
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+            progressEl.style.display = 'block';
+
+            try {
+                // Step 1: Update BOQ status to accepted
+                progressEl.textContent = 'Updating quote status...';
+                await SupabaseClient.from('boq').update({
+                    status: 'accepted',
+                    approved_at: new Date().toISOString(),
+                }).eq('id', quote.id);
+
+                // Step 2: Update project status
+                progressEl.textContent = 'Updating project...';
+                await SupabaseClient.from('projects').update({
+                    status: 'accepted',
+                    contract_value: calcPrice,
+                }).eq('id', quote.project_id);
+
+                // Step 3: DocuSign (if checked)
+                if (dsCheck.checked) {
+                    progressEl.textContent = 'Sending contract via DocuSign...';
+                    const signerEmail = body.querySelector('#aw-signer-email').value.trim();
+                    const signerName = body.querySelector('#aw-signer-name').value.trim();
+                    if (!signerEmail) throw new Error('Signer email is required for DocuSign');
+
+                    const doc = generateQuotePDF(quote, lineItems);
+                    const pdfBase64 = doc.output('datauristring').split(',')[1];
+
+                    const dsRes = await fetch(
+                        'https://ckvprducwuhhnrkbzaoo.supabase.co/functions/v1/send-docusign',
+                        {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${(await SupabaseClient.getSession())?.access_token}`,
+                            },
+                            body: JSON.stringify({
+                                signer_email: signerEmail,
+                                signer_name: signerName,
+                                quote_reference: quote.reference || '',
+                                project_reference: quote.project?.reference || '',
+                                pdf_base64: pdfBase64,
+                            }),
+                        }
+                    );
+                    const dsResult = await dsRes.json();
+                    if (!dsResult.success) throw new Error('DocuSign: ' + (dsResult.error || 'Unknown error'));
+
+                    // Store envelope ID
+                    if (dsResult.envelope_id) {
+                        await SupabaseClient.from('boq').update({
+                            docusign_envelope_id: dsResult.envelope_id,
+                        }).eq('id', quote.id);
+                    }
+                }
+
+                // Step 4: Create invoice (if checked)
+                if (invCheck.checked) {
+                    progressEl.textContent = 'Creating invoice...';
+                    const invAmount = parseFloat(body.querySelector('#aw-inv-amount').value) || 0;
+                    const invType = body.querySelector('#aw-inv-type').value;
+                    const invDue = body.querySelector('#aw-inv-due').value || null;
+
+                    if (invAmount <= 0) throw new Error('Invoice amount must be greater than 0');
+
+                    const { data: invData, error: invErr } = await SupabaseClient.from('invoices').insert({
+                        project_id: quote.project_id,
+                        reference: `INV-${quote.reference || 'QUOTE'}`,
+                        invoice_type: invType,
+                        status: 'draft',
+                        amount: invAmount,
+                        due_date: invDue,
+                        description: `${invType === 'deposit' ? 'Deposit' : 'Payment'} for ${quote.reference || 'Quote'}`,
+                    }).select().single();
+                    if (invErr) throw invErr;
+
+                    // Sync to Zoho Books
+                    if (invData) {
+                        progressEl.textContent = 'Syncing invoice to Zoho Books...';
+                        try {
+                            await fetch(
+                                'https://ckvprducwuhhnrkbzaoo.supabase.co/functions/v1/zoho-sync',
+                                {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${(await SupabaseClient.getSession())?.access_token}`,
+                                    },
+                                    body: JSON.stringify({
+                                        action: 'sync-invoice',
+                                        invoice_id: invData.id,
+                                    }),
+                                }
+                            );
+                        } catch (zohoErr) {
+                            console.warn('Zoho sync failed (non-blocking):', zohoErr);
+                        }
+                    }
+                }
+
+                progressEl.textContent = 'Done! Redirecting...';
+                const { data: refreshed } = await SupabaseClient.from('boq')
+                    .select('*, project:projects(reference, client:clients(name, email, phone))')
+                    .eq('id', quote.id).single();
+                loadDetail(win, refreshed || quote);
+            } catch (err) {
+                errEl.innerHTML = `<div class="form-error">Error: ${err.message}</div>`;
+                btn.disabled = false;
+                btn.textContent = 'Proceed';
+                progressEl.style.display = 'none';
+            }
+        });
+    }
+
     function showBoqPreview(win, quote, parsedItems) {
         const body = win.querySelector('.app-container');
         const totalCost = parsedItems.reduce((s, i) => s + i.cost, 0);
@@ -872,7 +1436,7 @@ const QuotesApp = (() => {
 
         const goBack = async () => {
             const { data: refreshed } = await SupabaseClient.from('boq')
-                .select('*, project:projects(reference, client:clients(name))')
+                .select('*, project:projects(reference, client:clients(name, email, phone))')
                 .eq('id', quote.id).single();
             loadDetail(win, refreshed || quote);
         };
@@ -907,7 +1471,7 @@ const QuotesApp = (() => {
                 await recalcBoqTotals(quote.id);
 
                 const { data: refreshed } = await SupabaseClient.from('boq')
-                    .select('*, project:projects(reference, client:clients(name))')
+                    .select('*, project:projects(reference, client:clients(name, email, phone))')
                     .eq('id', quote.id).single();
                 loadDetail(win, refreshed || quote);
             } catch (err) {
