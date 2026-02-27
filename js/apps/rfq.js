@@ -619,8 +619,15 @@ const RFQApp = (() => {
                 });
             });
 
-            // Generate RFQs → go to review
-            body.querySelector('#assign-generate').addEventListener('click', () => loadReview(win, boq));
+            // Generate RFQs → validate min-2 subs then go to review
+            body.querySelector('#assign-generate').addEventListener('click', () => {
+                const underAssigned = subItems.filter(item => (assignmentMap[item.id] || []).length < 2);
+                if (underAssigned.length > 0) {
+                    alert(`${underAssigned.length} item${underAssigned.length === 1 ? '' : 's'} still need${underAssigned.length === 1 ? 's' : ''} 2+ subcontractors assigned. Please assign at least 2 subcontractors to each item before generating RFQs.`);
+                    return;
+                }
+                loadReview(win, boq);
+            });
         } catch (err) {
             body.innerHTML = `<div class="app-error">Failed to load assignment: ${err.message}</div>`;
         }
@@ -713,6 +720,14 @@ const RFQApp = (() => {
                                             <td class="strong">${Utils.formatCurrency(estTotal)}</td>
                                         </tr></tfoot>
                                     </table>
+                                    <div class="rfq-attachments-section" data-rfq-id="${rfq.id}" style="padding:8px 16px;border-top:1px solid var(--border-color)">
+                                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                                            <span style="font-size:13px;font-weight:600;color:var(--text-primary)">📎 Attachments (<span class="rfq-attach-count" data-rfq-id="${rfq.id}">0</span>)</span>
+                                            <button class="rfq-add-files-btn" data-rfq-id="${rfq.id}" style="font-size:12px;padding:2px 8px;border:1px dashed var(--border-color);background:none;border-radius:4px;cursor:pointer;color:var(--text-muted)">+ Add Files</button>
+                                            <input type="file" multiple class="rfq-file-input" data-rfq-id="${rfq.id}" style="display:none">
+                                        </div>
+                                        <div class="rfq-attach-list" data-rfq-id="${rfq.id}"></div>
+                                    </div>
                                     <div class="rfq-review-actions">
                                         <div class="form-group" style="flex:1;max-width:200px">
                                             <label>Due Date</label>
@@ -756,6 +771,75 @@ const RFQApp = (() => {
                 });
             });
 
+            // Attachment helpers
+            function formatFileSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / 1048576).toFixed(1) + ' MB';
+            }
+
+            async function refreshAttachments(rfqId) {
+                const { data: attachments } = await SupabaseClient.from('rfq_attachments')
+                    .select('id, filename, file_size')
+                    .eq('rfq_id', rfqId)
+                    .order('created_at', { ascending: true });
+                const list = body.querySelector(`.rfq-attach-list[data-rfq-id="${rfqId}"]`);
+                const count = body.querySelector(`.rfq-attach-count[data-rfq-id="${rfqId}"]`);
+                const files = attachments || [];
+                count.textContent = files.length;
+                list.innerHTML = files.map(a => `
+                    <div style="display:flex;align-items:center;gap:8px;padding:3px 0;font-size:12px">
+                        <span style="color:var(--text-primary)">${a.filename}</span>
+                        <span style="color:var(--text-muted)">(${formatFileSize(a.file_size || 0)})</span>
+                        <button class="rfq-remove-attach" data-attach-id="${a.id}" data-rfq-id="${rfqId}" style="border:none;background:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:0 4px" title="Remove">×</button>
+                    </div>
+                `).join('');
+
+                // Bind remove buttons
+                list.querySelectorAll('.rfq-remove-attach').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        await SupabaseClient.from('rfq_attachments').delete().eq('id', btn.dataset.attachId);
+                        await refreshAttachments(btn.dataset.rfqId);
+                    });
+                });
+            }
+
+            // Load existing attachments for all RFQs
+            for (const rfq of allRfqs) {
+                await refreshAttachments(rfq.id);
+            }
+
+            // Add files button → trigger file input
+            body.querySelectorAll('.rfq-add-files-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    body.querySelector(`.rfq-file-input[data-rfq-id="${btn.dataset.rfqId}"]`).click();
+                });
+            });
+
+            // File input change → upload to rfq_attachments
+            body.querySelectorAll('.rfq-file-input').forEach(input => {
+                input.addEventListener('change', async () => {
+                    const rfqId = input.dataset.rfqId;
+                    for (const file of input.files) {
+                        const base64 = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result.split(',')[1]);
+                            reader.onerror = reject;
+                            reader.readAsDataURL(file);
+                        });
+                        await SupabaseClient.from('rfq_attachments').insert({
+                            rfq_id: rfqId,
+                            filename: file.name,
+                            file_size: file.size,
+                            mime_type: file.type,
+                            file_base64: base64,
+                        });
+                    }
+                    input.value = '';
+                    await refreshAttachments(rfqId);
+                });
+            });
+
             // Send individual RFQ
             async function sendRfq(rfqId) {
                 const rfq = allRfqs.find(r => r.id === rfqId);
@@ -765,6 +849,15 @@ const RFQApp = (() => {
                 const dueDate = dueDateInput?.value || null;
 
                 try {
+                    // Fetch attachments for this RFQ
+                    const { data: attachRows } = await SupabaseClient.from('rfq_attachments')
+                        .select('filename, file_base64')
+                        .eq('rfq_id', rfqId);
+                    const attachments = (attachRows || []).map(a => ({
+                        filename: a.filename,
+                        content: a.file_base64,
+                    }));
+
                     // Call edge function
                     const response = await fetch(
                         `${SupabaseClient.getClient().supabaseUrl}/functions/v1/send-rfq`,
@@ -787,6 +880,7 @@ const RFQApp = (() => {
                                 due_date: dueDate,
                                 boq_reference: boq.reference,
                                 project_reference: boq.project?.reference,
+                                attachments: attachments.length > 0 ? attachments : undefined,
                             }),
                         }
                     );

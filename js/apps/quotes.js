@@ -1352,11 +1352,9 @@ const QuotesApp = (() => {
                     }
                 }
 
-                progressEl.textContent = 'Done! Redirecting...';
-                const { data: refreshed } = await SupabaseClient.from('boq')
-                    .select('*, project:projects(reference, client:clients(name, email, phone))')
-                    .eq('id', quote.id).single();
-                loadDetail(win, refreshed || quote);
+                progressEl.textContent = 'Done! Opening RFQ assignment...';
+                sessionStorage.setItem('rfq_boq_id', quote.id);
+                Router.navigate('rfq');
             } catch (err) {
                 errEl.innerHTML = `<div class="form-error">Error: ${err.message}</div>`;
                 btn.disabled = false;

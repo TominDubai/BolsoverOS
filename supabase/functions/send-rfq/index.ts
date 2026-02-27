@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-const FROM_EMAIL = Deno.env.get("RFQ_FROM_EMAIL") || "rfq@bolsover.ae";
+const FROM_EMAIL = Deno.env.get("RFQ_FROM_EMAIL") || "onboarding@resend.dev";
 const COMPANY_NAME = Deno.env.get("COMPANY_NAME") || "Bolsover Interiors";
 
 const corsHeaders = {
@@ -16,6 +16,11 @@ interface RFQItem {
   unit: string;
 }
 
+interface RFQAttachment {
+  filename: string;
+  content: string;
+}
+
 interface SendRFQPayload {
   rfq_id: string;
   to_email: string;
@@ -25,6 +30,7 @@ interface SendRFQPayload {
   due_date: string | null;
   boq_reference: string;
   project_reference: string;
+  attachments?: RFQAttachment[];
 }
 
 function buildEmailHTML(payload: SendRFQPayload): string {
@@ -72,6 +78,9 @@ function buildEmailHTML(payload: SendRFQPayload): string {
           </thead>
           <tbody>${itemRows}</tbody>
         </table>
+        ${payload.attachments && payload.attachments.length > 0
+          ? `<p style="font-size:14px;color:#333">Please find attached the relevant documents for your reference.</p>`
+          : ""}
         <p style="font-size:14px;color:#333">
           Please reply to this email with your completed quotation, including unit prices for each item listed above.
         </p>
@@ -115,6 +124,14 @@ serve(async (req) => {
         to: [payload.to_email],
         subject: `RFQ ${payload.rfq_reference} — ${COMPANY_NAME}`,
         html,
+        ...(payload.attachments && payload.attachments.length > 0
+          ? {
+              attachments: payload.attachments.map((a) => ({
+                filename: a.filename,
+                content: a.content,
+              })),
+            }
+          : {}),
       }),
     });
 
