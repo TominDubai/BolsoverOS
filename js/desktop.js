@@ -48,7 +48,7 @@ const Desktop = (() => {
 
         SupabaseClient.onAuthStateChange((event, session) => {
             if (event === 'SIGNED_IN' && session) {
-                showDesktop(session.user);
+                showDesktop(session.user, true);
             } else if (event === 'SIGNED_OUT') {
                 showLogin();
             }
@@ -60,10 +60,16 @@ const Desktop = (() => {
         document.getElementById('app-shell').classList.add('hidden');
     }
 
-    function showDesktop(user) {
+    let desktopReady = false;
+
+    function showDesktop(user, skipNavigate = false) {
         document.getElementById('login-screen').classList.add('hidden');
         document.getElementById('app-shell').classList.remove('hidden');
-        init();
+
+        if (!desktopReady) {
+            init();
+            desktopReady = true;
+        }
 
         // Show user email in sidebar
         const nameEl = document.getElementById('sidebar-user-name');
@@ -74,8 +80,10 @@ const Desktop = (() => {
         // Logout button
         document.getElementById('sidebar-logout').onclick = logout;
 
-        // Default to Dashboard
-        Router.navigate('dashboard');
+        // Only navigate to dashboard on initial login, not on token refresh
+        if (!skipNavigate) {
+            Router.navigate('dashboard');
+        }
     }
 
     async function logout() {
@@ -84,6 +92,7 @@ const Desktop = (() => {
         } catch (e) {
             console.error('Logout error:', e);
         }
+        desktopReady = false;
         // Clear content area
         const area = document.getElementById('content-area');
         if (area) area.innerHTML = '';
