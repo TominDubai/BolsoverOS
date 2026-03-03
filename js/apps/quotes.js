@@ -1297,8 +1297,10 @@ const QuotesApp = (() => {
                             }),
                         }
                     );
-                    const dsResult = await dsRes.json();
-                    if (!dsResult.success) throw new Error('DocuSign: ' + (dsResult.error || 'Unknown error'));
+                    const dsText = await dsRes.text();
+                    let dsResult;
+                    try { dsResult = JSON.parse(dsText); } catch { throw new Error('DocuSign edge function error: ' + dsText.slice(0, 500)); }
+                    if (!dsResult.success) throw new Error('DocuSign: ' + (dsResult.error || JSON.stringify(dsResult).slice(0, 500)));
 
                     // Store envelope ID
                     if (dsResult.envelope_id) {

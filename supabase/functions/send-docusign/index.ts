@@ -3,7 +3,12 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const DOCUSIGN_INTEGRATION_KEY = Deno.env.get("DOCUSIGN_INTEGRATION_KEY")!;
 const DOCUSIGN_USER_ID = Deno.env.get("DOCUSIGN_USER_ID")!;
 const DOCUSIGN_ACCOUNT_ID = Deno.env.get("DOCUSIGN_ACCOUNT_ID")!;
-const DOCUSIGN_RSA_PRIVATE_KEY = Deno.env.get("DOCUSIGN_RSA_PRIVATE_KEY")!;
+// RSA key stored as base64 to avoid newline issues in env vars
+const DOCUSIGN_RSA_PRIVATE_KEY = (() => {
+  const b64 = Deno.env.get("DOCUSIGN_RSA_PRIVATE_KEY_B64");
+  if (b64) return atob(b64);
+  return Deno.env.get("DOCUSIGN_RSA_PRIVATE_KEY") || "";
+})();
 const DOCUSIGN_BASE_URL =
   Deno.env.get("DOCUSIGN_BASE_URL") || "https://demo.docusign.net/restapi";
 
@@ -21,16 +26,58 @@ interface SendDocuSignPayload {
   pdf_base64: string;
 }
 
+// Wrap PKCS#1 RSA key in PKCS#8 envelope for Web Crypto API
+function wrapPkcs1InPkcs8(pkcs1Bytes: Uint8Array): Uint8Array {
+  // PKCS#8 header for RSA: SEQUENCE { INTEGER(0), SEQUENCE { OID(rsaEncryption), NULL }, OCTET STRING { pkcs1 } }
+  const oid = new Uint8Array([
+    0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01,
+    0x01, 0x05, 0x00,
+  ]);
+  const version = new Uint8Array([0x02, 0x01, 0x00]);
+
+  // Build OCTET STRING wrapping the PKCS#1 key
+  const octetStr = asn1Wrap(0x04, pkcs1Bytes);
+  // Build outer SEQUENCE
+  const inner = new Uint8Array([...version, ...oid, ...octetStr]);
+  return asn1Wrap(0x30, inner);
+}
+
+function asn1Wrap(tag: number, content: Uint8Array): Uint8Array {
+  const len = content.length;
+  let header: number[];
+  if (len < 128) {
+    header = [tag, len];
+  } else if (len < 256) {
+    header = [tag, 0x81, len];
+  } else if (len < 65536) {
+    header = [tag, 0x82, (len >> 8) & 0xff, len & 0xff];
+  } else {
+    header = [tag, 0x83, (len >> 16) & 0xff, (len >> 8) & 0xff, len & 0xff];
+  }
+  const result = new Uint8Array(header.length + len);
+  result.set(header);
+  result.set(content, header.length);
+  return result;
+}
+
 // Convert PEM to CryptoKey for signing
 async function importRSAKey(pem: string): Promise<CryptoKey> {
-  const pemContents = pem
+  // Handle literal \n from env vars
+  const normalizedPem = pem.replace(/\\n/g, "\n");
+  const isPkcs1 = normalizedPem.includes("BEGIN RSA PRIVATE KEY");
+  const pemContents = normalizedPem
     .replace(/-----BEGIN RSA PRIVATE KEY-----/g, "")
     .replace(/-----END RSA PRIVATE KEY-----/g, "")
     .replace(/-----BEGIN PRIVATE KEY-----/g, "")
     .replace(/-----END PRIVATE KEY-----/g, "")
     .replace(/\s/g, "");
 
-  const binaryDer = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
+  let binaryDer = Uint8Array.from(atob(pemContents), (c) => c.charCodeAt(0));
+
+  // PKCS#1 keys need to be wrapped in PKCS#8 for Web Crypto
+  if (isPkcs1) {
+    binaryDer = wrapPkcs1InPkcs8(binaryDer);
+  }
 
   return crypto.subtle.importKey(
     "pkcs8",
