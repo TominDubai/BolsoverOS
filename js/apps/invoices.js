@@ -56,12 +56,29 @@ const InvoicesApp = (() => {
         WindowManager.createWindow('invoices', 'Invoices', html, {
             width: 940, height: 600,
             onReady: async (win) => {
-                await loadList(win);
+                // Cross-app handoff (e.g. dashboard deadline/attention click-through)
+                const openId = sessionStorage.getItem('invoices_open_id');
+                const presetFilter = sessionStorage.getItem('invoices_filter');
+                sessionStorage.removeItem('invoices_open_id');
+                sessionStorage.removeItem('invoices_filter');
+                if (openId) {
+                    try {
+                        const { data: inv } = await SupabaseClient.from('invoices')
+                            .select('*, project:projects(reference, client:clients(name))')
+                            .eq('id', openId)
+                            .single();
+                        if (inv) {
+                            await showDetail(win, inv);
+                            return;
+                        }
+                    } catch (e) { /* fall through to list */ }
+                }
+                await loadList(win, presetFilter);
             }
         });
     }
 
-    async function loadList(win) {
+    async function loadList(win, presetFilter) {
         const body = win.querySelector('.app-container');
         try {
             const { data: invoices, error } = await SupabaseClient.from('invoices')
@@ -194,7 +211,12 @@ const InvoicesApp = (() => {
             search.addEventListener('input', applyFilters);
             statusFilter.addEventListener('change', applyFilters);
             typeFilter.addEventListener('change', applyFilters);
-            render(all);
+            if (presetFilter && [...statusFilter.options].some(o => o.value === presetFilter)) {
+                statusFilter.value = presetFilter;
+                applyFilters();
+            } else {
+                render(all);
+            }
         } catch (err) {
             body.innerHTML = `<div class="app-error">Failed to load invoices: ${err.message}</div>`;
         }
@@ -372,7 +394,7 @@ const InvoicesApp = (() => {
                         <button id="inv-status-go">Update</button>
                     </div>
                     <button class="btn-edit" id="inv-edit-btn">Edit</button>
-                    <button class="btn-edit" id="inv-zoho-btn" style="background:rgba(40,167,69,0.15);color:#28a745">${inv.zoho_invoice_id ? 'Re-sync Zoho' : 'Sync to Zoho'}</button>
+                    <button class="btn-edit" id="inv-zoho-btn" style="background:rgba(34,197,94,0.15);color:#22c55e">${inv.zoho_invoice_id ? 'Re-sync Zoho' : 'Sync to Zoho'}</button>
                 </div>
                 ${inv.zoho_invoice_id ? `<div style="padding:4px 0 8px;font-size:11px;color:var(--text-muted)">Zoho ID: ${inv.zoho_invoice_id} | Last sync: ${Utils.formatDate(inv.zoho_sync_at)}</div>` : ''}
                 <div class="detail-grid">

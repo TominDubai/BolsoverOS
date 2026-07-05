@@ -1922,6 +1922,121 @@ html, body {
     background: rgba(34, 197, 94, 0.08) !important;
 }
 
+/* ===== Dashboard: Loading Skeletons ===== */
+.skl {
+    position: relative;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: var(--radius-sm);
+    display: inline-block;
+}
+
+.skl::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent);
+    transform: translateX(-100%);
+    animation: skl-shimmer 1.4s ease infinite;
+}
+
+@keyframes skl-shimmer {
+    100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skl::after { animation: none; }
+}
+
+.skl-label { width: 80px; height: 11px; margin-bottom: 8px; }
+.skl-value { width: 60px; height: 28px; display: block; margin: 0 auto 6px; }
+.skl-sub { width: 100px; height: 12px; }
+.skl-title { width: 120px; height: 13px; }
+.skl-body { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.skl-line { width: 100%; height: 12px; display: block; }
+.skl-line.short { width: 60%; }
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* ===== Dashboard: Error States ===== */
+.dash-error-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 16px 16px 0;
+    padding: 10px 14px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: var(--radius-sm);
+    color: #ef4444;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.dash-widget-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 32px 20px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+/* ===== Dashboard: Interactive Rows & Cards ===== */
+.dash-nav {
+    cursor: pointer;
+}
+
+.dash-nav:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.stat-card.dash-nav {
+    transition: background var(--transition), border-color var(--transition);
+}
+
+.stat-card.dash-nav:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.stat-card.accent.dash-nav:hover {
+    background: rgba(233, 69, 96, 0.14);
+    border-color: var(--accent);
+}
+
+.stat-card.warning.dash-nav:hover {
+    background: rgba(245, 158, 11, 0.14);
+    border-color: #f59e0b;
+}
+
+.attention-item.dash-nav:hover {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 35%, transparent);
+}
+
+.dash-table tr.dash-nav:hover {
+    background: rgba(233, 69, 96, 0.08);
+}
+
+/* Content is data — let the user copy it (chrome stays non-selectable) */
+#content-area .window-body {
+    user-select: text;
+}
+
 /* ===== Utility ===== */
 .hidden {
     display: none !important;

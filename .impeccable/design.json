@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-05T00:00:00Z",
+  "title": "Design System: BolsoverOS",
+  "extensions": {
+    "colorMeta": {
+      "deep-space": { "role": "neutral", "displayName": "Deep Space", "canonical": "#1a1a2e", "tonalRamp": ["#08080e", "#12121f", "#1a1a2e", "#2b2b45", "#44446a", "#6a6a97", "#9c9cbe", "#d3d3e4"] },
+      "window-surface": { "role": "neutral", "displayName": "Window Surface", "canonical": "#1e1e2e", "tonalRamp": ["#0a0a0f", "#15151f", "#1e1e2e", "#303047", "#4a4a6b", "#707095", "#a0a0bd", "#d5d5e3"] },
+      "window-header": { "role": "neutral", "displayName": "Window Header", "canonical": "#2a2a3e", "tonalRamp": ["#0d0d13", "#1c1c29", "#2a2a3e", "#3d3d58", "#565679", "#7b7b9e", "#a8a8c2", "#d8d8e5"] },
+      "window-border": { "role": "neutral", "displayName": "Window Border", "canonical": "#333350", "tonalRamp": ["#0f0f18", "#212134", "#333350", "#48486f", "#636392", "#8787b1", "#b0b0cd", "#dcdcea"] },
+      "neon-punch": { "role": "primary", "displayName": "Neon Punch", "canonical": "#e94560", "tonalRamp": ["#3d0a14", "#6e1526", "#a02238", "#d0324c", "#e94560", "#f07084", "#f69fab", "#fbd0d6"] },
+      "neon-punch-bright": { "role": "primary", "displayName": "Neon Punch Bright", "canonical": "#ff6b81", "tonalRamp": ["#47101c", "#7d1f33", "#b32f4b", "#e14a64", "#ff6b81", "#ff8f9f", "#ffb5c0", "#ffdae0"] },
+      "ink-bright": { "role": "neutral", "displayName": "Ink Bright", "canonical": "#eeeeee", "tonalRamp": ["#262626", "#4a4a4a", "#6e6e6e", "#929292", "#b6b6b6", "#dadada", "#eeeeee", "#fafafa"] },
+      "ink-soft": { "role": "neutral", "displayName": "Ink Soft", "canonical": "#aaaabb", "tonalRamp": ["#1b1b20", "#36363f", "#52525f", "#6e6e7f", "#8b8b9d", "#aaaabb", "#c8c8d3", "#e6e6ec"] },
+      "ink-faint": { "role": "neutral", "displayName": "Ink Faint", "canonical": "#666677", "tonalRamp": ["#131317", "#27272e", "#3b3b46", "#50505e", "#666677", "#8a8a99", "#b1b1bc", "#d9d9df"] },
+      "success-green": { "role": "tertiary", "displayName": "Success Green", "canonical": "#22c55e", "tonalRamp": ["#07301a", "#0d5029", "#14813d", "#1aa34d", "#22c55e", "#5ad584", "#93e4ab", "#ccf2d5"] },
+      "warning-amber": { "role": "tertiary", "displayName": "Warning Amber", "canonical": "#f59e0b", "tonalRamp": ["#3d2803", "#6e4705", "#a06808", "#d0870a", "#f59e0b", "#f8b647", "#fbcf85", "#fde8c3"] },
+      "danger-red": { "role": "tertiary", "displayName": "Danger Red", "canonical": "#ef4444", "tonalRamp": ["#3f0d0d", "#701a1a", "#a12828", "#d13636", "#ef4444", "#f37373", "#f8a2a2", "#fcd1d1"] },
+      "info-blue": { "role": "tertiary", "displayName": "Info Blue", "canonical": "#3b82f6", "tonalRamp": ["#0c2149", "#16407e", "#2160b4", "#2c71dd", "#3b82f6", "#6ca1f8", "#9dc1fb", "#cee0fd"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Stat-card values only — the numbers scanned first." },
+      "headline": { "displayName": "Headline", "purpose": "Window, detail, and form titles." },
+      "title": { "displayName": "Title", "purpose": "Section headings inside panels and cards." },
+      "body": { "displayName": "Body", "purpose": "Table cells, form values, nav items, general copy." },
+      "label": { "displayName": "Label", "purpose": "Uppercase 0.5px-tracked micro-labels: column headers, field labels, section micro-headers." }
+    },
+    "shadows": [
+      { "name": "floating-window", "value": "0 8px 32px rgba(0, 0, 0, 0.4)", "purpose": "Modals, floating windows, login card — true overlays only." },
+      { "name": "raised-control", "value": "0 2px 8px rgba(0, 0, 0, 0.3)", "purpose": "Popovers and dropdown menus." }
+    ],
+    "motion": [
+      { "name": "transition-standard", "value": "0.15s ease", "purpose": "Default for all state transitions: hover tints, focus borders, color shifts." },
+      { "name": "transition-progress", "value": "width 0.4s ease", "purpose": "Progress and health bar fills." }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The commit action — Save, Send, Create. Solid Neon Punch, one per view.",
+      "html": "<button class=\"ds-btn-primary\">Save Quote</button>",
+      "css": ".ds-btn-primary { height: 32px; padding: 0 20px; background: var(--accent, #e94560); border: none; border-radius: 6px; color: #fff; font-size: 12px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; cursor: pointer; transition: background 0.15s ease; } .ds-btn-primary:hover { background: var(--accent-hover, #ff6b81); } .ds-btn-primary:focus-visible { outline: 2px solid var(--accent, #e94560); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }"
+    },
+    {
+      "name": "Accent Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline-accent",
+      "description": "Secondary-but-branded actions (Import, New). Tinted at rest, fills solid on hover.",
+      "html": "<button class=\"ds-btn-outline\">+ New Enquiry</button>",
+      "css": ".ds-btn-outline { height: 32px; padding: 0 14px; background: rgba(233, 69, 96, 0.15); border: 1px solid var(--accent, #e94560); border-radius: 6px; color: var(--accent, #e94560); font-size: 12px; font-weight: 500; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; cursor: pointer; white-space: nowrap; transition: all 0.15s ease; } .ds-btn-outline:hover { background: var(--accent, #e94560); color: #fff; } .ds-btn-outline:focus-visible { outline: 2px solid var(--accent, #e94560); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Quiet utility actions — Edit, Back. Tonal tint that doubles on hover.",
+      "html": "<button class=\"ds-btn-ghost\">Edit</button>",
+      "css": ".ds-btn-ghost { height: 28px; padding: 0 12px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--window-border, #333350); border-radius: 6px; color: var(--text-secondary, #aaaabb); font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; cursor: pointer; transition: all 0.15s ease; } .ds-btn-ghost:hover { background: rgba(255, 255, 255, 0.12); color: var(--text-primary, #eeeeee); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--accent, #e94560); outline-offset: 2px; }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Inset dark field; border snaps to Neon Punch on focus.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Search projects...\" />",
+      "css": ".ds-input { height: 32px; min-width: 200px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--window-border, #333350); border-radius: 6px; color: var(--text-primary, #eeeeee); padding: 0 10px; font-size: 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; outline: none; transition: border-color 0.15s ease; } .ds-input:focus { border-color: var(--accent, #e94560); } .ds-input::placeholder { color: var(--text-muted, #666677); }"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "App-dock entry; active state is the strongest selection signal in the app.",
+      "html": "<div style=\"display:flex;flex-direction:column;gap:2px;width:200px;\"><button class=\"ds-nav-item ds-nav-active\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/></svg>Dashboard</button><button class=\"ds-nav-item\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\"/><polyline points=\"14 2 14 8 20 8\"/></svg>Quotes</button></div>",
+      "css": ".ds-nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; background: none; border: none; border-radius: 6px; color: var(--text-secondary, #aaaabb); font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; cursor: pointer; transition: all 0.15s ease; text-align: left; width: 100%; } .ds-nav-item:hover { background: rgba(255, 255, 255, 0.06); color: var(--text-primary, #eeeeee); } .ds-nav-item.ds-nav-active { background: rgba(233, 69, 96, 0.15); color: var(--accent, #e94560); }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-status",
+      "description": "Pastel data chip — pipeline state readable across the room. Light bg + dark saturated text.",
+      "html": "<div style=\"display:flex;gap:6px;\"><span class=\"ds-badge\" style=\"background:#dcfce7;color:#166534;\">Accepted</span><span class=\"ds-badge\" style=\"background:#dbeafe;color:#1e40af;\">Enquiry</span><span class=\"ds-badge\" style=\"background:#fef3c7;color:#92400e;\">Deposit Pending</span></div>",
+      "css": ".ds-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; white-space: nowrap; line-height: 1.6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip-filter",
+      "description": "Toolbar trade/category filter; selected fills solid Neon Punch.",
+      "html": "<div style=\"display:flex;gap:4px;\"><button class=\"ds-chip ds-chip-active\">Electrical</button><button class=\"ds-chip\">Plumbing</button><button class=\"ds-chip\">Joinery</button></div>",
+      "css": ".ds-chip { padding: 4px 10px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--window-border, #333350); border-radius: 12px; color: var(--text-secondary, #aaaabb); font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; cursor: pointer; text-transform: capitalize; transition: all 0.15s ease; } .ds-chip:hover { background: rgba(255, 255, 255, 0.1); } .ds-chip.ds-chip-active { background: var(--accent, #e94560); color: #fff; border-color: var(--accent, #e94560); }"
+    },
+    {
+      "name": "Stat Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Dashboard KPI: uppercase micro-label over a Display-weight value on a tonal card.",
+      "html": "<div class=\"ds-stat-card\"><div class=\"ds-stat-label\">Active Projects</div><div class=\"ds-stat-value\">12</div><div class=\"ds-stat-sub\">3 due this week</div></div>",
+      "css": ".ds-stat-card { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 16px; text-align: center; width: 180px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; } .ds-stat-label { font-size: 11px; color: var(--text-muted, #666677); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; } .ds-stat-value { font-size: 28px; font-weight: 700; color: var(--text-primary, #eeeeee); line-height: 1.2; } .ds-stat-sub { font-size: 12px; color: var(--text-secondary, #aaaabb); margin-top: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Personal OS",
+    "overview": "BolsoverOS is one person's operating system for running a construction contracting business — and it looks like it. The desktop-OS metaphor is the identity: a fixed sidebar dock of apps, window-chrome headers, a viewport that never scrolls as a page. Everything renders on a Deep Space navy field, and one color — Neon Punch coral — does all the talking: it marks the active app, the primary action, and nothing else. The system explicitly rejects boring enterprise software and the generic SaaS admin template. It is fun and design-driven in the Notion/Craft sense — personality lives in tactile details and glanceable state, never in decoration that slows work down.",
+    "keyCharacteristics": [
+      "Full-viewport app shell; panels scroll, the page never does",
+      "Flat surfaces stacked by tonal layering (2–6% white tints), not shadows",
+      "One accent (Neon Punch) reserved for action and selection",
+      "Bright pastel data chips as the deliberate spark of color on the dark field",
+      "One type family at a tight scale; uppercase micro-labels structure every panel"
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "Neon Punch is the only brand accent and appears on well under 10% of any screen. If two unrelated things on one panel are coral, one of them is wrong.", "section": "colors" },
+      { "name": "The Chips-Are-Data Rule", "body": "Bright pastel chips are reserved for data classification (status, trade). Never use the pastel treatment for buttons, headers, or decoration — their rarity is what makes state legible at a glance.", "section": "colors" },
+      { "name": "The One Family Rule", "body": "No display fonts, no webfonts, no pairing. The system stack at five weights is the entire typographic palette.", "section": "typography" },
+      { "name": "The Uppercase-Is-Structure Rule", "body": "Uppercase tracked micro-labels mark structure (columns, field names, section headers) — never emphasis. Emphasis is weight (600–700) in Ink Bright.", "section": "typography" },
+      { "name": "The Tonal Ladder Rule", "body": "To raise a surface, add 2–3% white tint — never a shadow. Hover states climb exactly one rung. Shadows are reserved for elements that overlap other content.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep Neon Punch scarce — primary action, active selection, focus, and clickable references only (The One Voice Rule).",
+      "Do climb the tonal ladder for depth: +2–3% white tint per layer, borders for seams, shadows only for true overlays.",
+      "Do give every interactive element all its states: default, hover, focus-visible, active, disabled, loading, error — and use skeleton rows, not centered spinners, for loading tables.",
+      "Do write empty states that teach (\"No RFQs yet — accept a quote to generate one\"), never a bare \"nothing here\".",
+      "Do keep uppercase 0.5px-tracked micro-labels as the structural grammar of panels.",
+      "Do respect prefers-reduced-motion on every transition and keep motion 150–250ms, ease-out, state-driven."
+    ],
+    "donts": [
+      "Don't drift toward \"boring enterprise software\" — gray form walls, cramped bureaucratic tables.",
+      "Don't build the \"generic SaaS admin template\" — identical stat-card grids, purple gradients, stock dashboard clichés.",
+      "Don't let fun tip into toy-like: no bounce easing, no confetti, no mascots — this runs real money.",
+      "Don't use Ink Faint (#666677) for any text the user must read to act; it fails AA body contrast on Deep Space. Promote to Ink Soft.",
+      "Don't add new colored side-stripes: border-left 3px accents (currently on hub cards) are a legacy deviation — migrate to full 1px borders + background tints when those cards are next touched.",
+      "Don't spread glassmorphism: the login card's blur is the app's single glass moment; workspace surfaces stay opaque.",
+      "Don't use pastel chip styling on anything that isn't a data classification.",
+      "Don't introduce webfonts, display faces, or a second family — The One Family Rule."
+    ]
+  }
+}

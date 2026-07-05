@@ -97,6 +97,16 @@ const Utils = (() => {
         steel: { bg: '#e2e8f0', text: '#475569' },
     };
 
+    function escapeHtml(value) {
+        if (value == null) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
     function formatCurrency(amount) {
         if (amount == null) return 'AED 0';
         return new Intl.NumberFormat('en-AE', {
@@ -189,6 +199,7 @@ const Utils = (() => {
         STATUS_LABELS, STATUS_COLORS, HEALTH_ICONS, HEALTH_LABELS,
         PIPELINE_STATUSES, ACTIVE_STATUSES, ENQUIRY_STATUSES, TRADE_COLORS,
         RFQ_STATUS_LABELS, RFQ_STATUS_COLORS,
+        escapeHtml,
         formatCurrency, formatCurrencyShort, formatDate, formatRelativeDate,
         statusBadge, tradeBadge, healthBadge, ratingStars, rfqStatusBadge,
     };

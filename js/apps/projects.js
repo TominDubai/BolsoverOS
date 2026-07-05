@@ -149,13 +149,30 @@ const ProjectsApp = (() => {
         WindowManager.createWindow('projects', 'Projects', html, {
             width: 920, height: 600,
             onReady: async (win) => {
-                await loadList(win);
+                // Cross-app handoff (e.g. dashboard row/stat click-through)
+                const openId = sessionStorage.getItem('projects_open_id');
+                const presetFilter = sessionStorage.getItem('projects_filter');
+                sessionStorage.removeItem('projects_open_id');
+                sessionStorage.removeItem('projects_filter');
+                if (openId) {
+                    try {
+                        const { data: project } = await SupabaseClient.from('projects')
+                            .select('*, client:clients(name)')
+                            .eq('id', openId)
+                            .single();
+                        if (project) {
+                            await loadDetail(win, project.id, [project]);
+                            return;
+                        }
+                    } catch (e) { /* fall through to list */ }
+                }
+                await loadList(win, presetFilter);
             }
         });
     }
 
     /* ── Project List ── */
-    async function loadList(win) {
+    async function loadList(win, presetFilter) {
         const body = win.querySelector('.app-container');
         try {
             const { data: projects, error } = await SupabaseClient.from('projects')
@@ -236,7 +253,12 @@ const ProjectsApp = (() => {
 
             search.addEventListener('input', applyFilters);
             filter.addEventListener('change', applyFilters);
-            render(projects || []);
+            if (presetFilter && [...filter.options].some(o => o.value === presetFilter)) {
+                filter.value = presetFilter;
+                applyFilters();
+            } else {
+                render(projects || []);
+            }
         } catch (err) {
             body.innerHTML = `<div class="app-error">Failed to load projects: ${err.message}</div>`;
         }
